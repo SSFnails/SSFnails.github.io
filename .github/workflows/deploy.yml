@@ -31,8 +31,8 @@ jobs:
           # публичные ключи, секретов здесь нет
           VITE_SUPABASE_URL: https://hmcyumxfbhffavanxkdt.supabase.co
           VITE_SUPABASE_ANON_KEY: sb_publishable_KPqGK0sF1R3DR09fYoLeig_Ed8GpyZf
-      # запасная страница для роутинга одностраничника
-      - run: cp dist/index.html dist/404.html
+      # запасная страница для роутинга одностраничника, и /book как настоящая страница
+      - run: cp dist/index.html dist/404.html && cp dist/index.html dist/book.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
