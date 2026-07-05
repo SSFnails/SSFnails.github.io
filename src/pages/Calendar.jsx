@@ -150,7 +150,12 @@ export default function Calendar() {
           </div>
 
           <div className="mt-6">
-            <h2 className="font-display text-xl">{fmtDateFull(day)}</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-xl">{fmtDateFull(day)}</h2>
+              <Btn onClick={() => setFormSlot({ date: day, slotId: null })} className="!py-2">
+                + Записать
+              </Btn>
+            </div>
 
             <div className="mt-3 space-y-2">
               {daySlots.length === 0 && (
