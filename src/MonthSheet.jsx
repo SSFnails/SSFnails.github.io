@@ -12,6 +12,7 @@ export default function MonthSheet({
   pickableEmpty = false,
   canPrev = true,
   canNext = true,
+  dense = false, // узкий контейнер: дни недели всегда короткие
 }) {
   const pad = (new Date(cursor).getDay() + 6) % 7
   const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate()
@@ -52,12 +53,18 @@ export default function MonthSheet({
         {WEEKDAYS_EN.map((w, i) => (
           <div
             key={w}
-            className={`border-b border-cream/30 pb-2 text-center font-display font-semibold text-[10px] sm:text-base ${
-              i > 0 ? 'border-l border-l-cream/15' : ''
-            }`}
+            className={`overflow-hidden border-b border-cream/30 pb-2 text-center font-display font-semibold ${
+              dense ? 'text-[11px]' : 'text-[11px] lg:text-[15px]'
+            } ${i > 0 ? 'border-l border-l-cream/15' : ''}`}
           >
-            <span className="hidden sm:inline">{w}</span>
-            <span className="sm:hidden">{WEEKDAYS_EN_SHORT[i]}</span>
+            {dense ? (
+              WEEKDAYS_EN_SHORT[i]
+            ) : (
+              <>
+                <span className="hidden lg:inline">{w}</span>
+                <span className="lg:hidden">{WEEKDAYS_EN_SHORT[i]}</span>
+              </>
+            )}
           </div>
         ))}
         {cells.map((iso, i) => {

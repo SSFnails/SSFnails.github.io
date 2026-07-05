@@ -154,6 +154,7 @@ export default function Book() {
               <div className="mt-4">
                 {cursor && (
                   <MonthSheet
+                    dense
                     cursor={cursor}
                     onShift={(n) => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + n, 1))}
                     byDate={byDate}
