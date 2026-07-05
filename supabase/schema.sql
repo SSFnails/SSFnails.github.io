@@ -96,7 +96,8 @@ create policy "master all slots" on slots for all to authenticated using (true) 
 create policy "master all bookings" on bookings for all to authenticated using (true) with check (true);
 
 create policy "public services" on services for select to anon using (is_active);
-create policy "public free slots" on slots for select to anon using (status = 'free' and date >= current_date);
+-- клиенты видят все будущие окошки (занятые показываются перечёркнутыми, без имён)
+create policy "public future slots" on slots for select to anon using (date >= current_date);
 
 -- ЗАПИСЬ КЛИЕНТА С ПУБЛИЧНОЙ СТРАНИЦЫ --------------------------------------
 -- Атомарно: проверяет что слот ещё свободен, находит или создаёт клиента,

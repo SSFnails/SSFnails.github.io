@@ -10,6 +10,14 @@ export const MONTHS_GEN = [
 
 export const WEEKDAYS_SHORT = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
 
+// английские названия, как на фирменных картинках-календарях мастера
+export const MONTHS_EN = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+]
+export const WEEKDAYS_EN = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+export const WEEKDAYS_EN_SHORT = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
 export function toISO(d) {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')

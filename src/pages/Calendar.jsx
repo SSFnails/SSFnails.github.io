@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
-import { MONTHS, WEEKDAYS_SHORT, fmtDateFull, fmtTime, toISO, todayISO } from '../lib/format'
+import { fmtDateFull, fmtTime, toISO, todayISO } from '../lib/format'
 import { Btn, Card, Minion, MinionPeek, Spinner, StatusChip, inputCls } from '../ui'
+import MonthSheet from '../MonthSheet'
 import BookingForm from '../BookingForm'
 import BookingDetails from '../BookingDetails'
 
@@ -52,14 +53,6 @@ export default function Calendar() {
 
   useAutoRefresh(load, 45000)
 
-  // сетка месяца с понедельника
-  const first = new Date(cursor)
-  const pad = (first.getDay() + 6) % 7
-  const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate()
-  const cells = []
-  for (let i = 0; i < pad; i++) cells.push(null)
-  for (let d = 1; d <= daysInMonth; d++) cells.push(toISO(new Date(cursor.getFullYear(), cursor.getMonth(), d)))
-
   const byDay = {}
   for (const s of slots) (byDay[s.date] ||= []).push(s)
 
@@ -92,62 +85,18 @@ export default function Calendar() {
 
   return (
     <div className="pt-2">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-3xl capitalize">
-          {MONTHS[cursor.getMonth()]} <span className="text-cream-dim">{cursor.getFullYear()}</span>
-        </h1>
-        <div className="flex gap-1">
-          <button onClick={() => shiftMonth(-1)} className="rounded-lg bg-mocha px-3.5 py-2 active:bg-mocha-2">‹</button>
-          <button onClick={() => shiftMonth(1)} className="rounded-lg bg-mocha px-3.5 py-2 active:bg-mocha-2">›</button>
-        </div>
-      </div>
-
       {loading ? (
         <Spinner />
       ) : (
         <>
-          <div className="mt-4 grid grid-cols-7 gap-1 text-center">
-            {WEEKDAYS_SHORT.map((w) => (
-              <div key={w} className="pb-1 text-xs uppercase text-cream-dim">
-                {w}
-              </div>
-            ))}
-            {cells.map((iso, i) =>
-              iso === null ? (
-                <div key={`p${i}`} />
-              ) : (
-                <button
-                  key={iso}
-                  onClick={() => setDay(iso)}
-                  className={`flex aspect-square flex-col items-center justify-center rounded-lg text-sm ${
-                    day === iso
-                      ? 'bg-gold text-espresso font-semibold'
-                      : iso === todayISO()
-                        ? 'bg-mocha-2 text-cream'
-                        : 'bg-mocha/50 text-cream'
-                  }`}
-                >
-                  {Number(iso.slice(8))}
-                  <span className="mt-0.5 flex h-1.5 gap-0.5">
-                    {(byDay[iso] || []).slice(0, 4).map((s) => (
-                      <span
-                        key={s.id}
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          day === iso
-                            ? 'bg-espresso/60'
-                            : s.status === 'free'
-                              ? 'bg-gold'
-                              : s.status === 'busy'
-                                ? 'bg-cream-dim/60'
-                                : 'bg-line'
-                        }`}
-                      />
-                    ))}
-                  </span>
-                </button>
-              ),
-            )}
-          </div>
+          <MonthSheet
+            cursor={cursor}
+            onShift={shiftMonth}
+            byDate={byDay}
+            selected={day}
+            onPickDay={setDay}
+            pickableEmpty
+          />
 
           <div className="mt-6">
             <div className="flex items-center justify-between">

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase, configured, uploadReference } from '../lib/supabase'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
-import { MONTHS, WEEKDAYS_SHORT, fmtDateFull, fmtTime, toISO, todayISO } from '../lib/format'
+import { fmtDateFull, fmtTime, todayISO } from '../lib/format'
 import { Btn, Field, Plate, Spinner, Toggle, inputCls } from '../ui'
+import MonthSheet from '../MonthSheet'
 
 // Публичная страница самозаписи: только свободные окошки, заявка уходит мастеру
 export default function Book() {
@@ -23,10 +24,10 @@ export default function Book() {
   const [slotLost, setSlotLost] = useState(false)
 
   async function loadSlots() {
+    // берём и занятые: они показываются перечёркнутыми, как на картинках мастера
     const { data } = await supabase
       .from('slots')
-      .select('id, date, time')
-      .eq('status', 'free')
+      .select('id, date, time, status')
       .gte('date', todayISO())
       .order('date')
       .order('time')
@@ -44,7 +45,7 @@ export default function Book() {
 
   // если выбранное время только что заняли, честно скажем сразу
   useEffect(() => {
-    if (slots !== null && slotId && !slots.some((s) => s.id === slotId)) {
+    if (slots !== null && slotId && !slots.some((s) => s.id === slotId && s.status === 'free')) {
       setSlotId(null)
       setSlotLost(true)
     }
@@ -56,7 +57,29 @@ export default function Book() {
     return m
   }, [slots])
 
-  const dates = Object.keys(byDate).sort()
+  const freeByDate = useMemo(() => {
+    const m = {}
+    for (const s of slots || []) if (s.status === 'free') (m[s.date] ||= []).push(s)
+    return m
+  }, [slots])
+
+  const dates = Object.keys(freeByDate).sort()
+
+  // месяц календаря: открываемся на первом месяце со свободными окошками
+  const [cursor, setCursor] = useState(null)
+  useEffect(() => {
+    if (cursor !== null || slots === null) return
+    const first = dates[0] || Object.keys(byDate).sort()[0]
+    const d = first ? new Date(first + 'T12:00:00') : new Date()
+    setCursor(new Date(d.getFullYear(), d.getMonth(), 1))
+  }, [slots]) // eslint-disable-line
+
+  const monthKeys = useMemo(() => {
+    const keys = new Set(Object.keys(byDate).map((d) => d.slice(0, 7)))
+    keys.add(todayISO().slice(0, 7))
+    return [...keys].sort()
+  }, [byDate])
+  const cursorKey = cursor ? `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}` : ''
   const later = serviceId === 'later' // услугу решат на месте
   const service = later ? null : services.find((s) => s.id === serviceId)
   const price = service ? (withDesign ? (service.price_design ?? service.price_plain) : service.price_plain) : null
@@ -123,30 +146,43 @@ export default function Book() {
         <div className="space-y-8 pb-16">
           <section>
             <Plate>Свободные окошки</Plate>
-            {dates.length === 0 ? (
+            {Object.keys(byDate).length === 0 ? (
               <p className="mt-3 text-sm leading-relaxed text-cream-dim">
                 Свободных окошек сейчас нет. Загляните позже или напишите мастеру в телеграм.
               </p>
             ) : (
-              <MonthPicker
-                byDate={byDate}
-                date={date}
-                onPick={(d) => {
-                  setDate(d)
-                  setSlotId(null)
-                }}
-              />
+              <div className="mt-4">
+                {cursor && (
+                  <MonthSheet
+                    cursor={cursor}
+                    onShift={(n) => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + n, 1))}
+                    byDate={byDate}
+                    selected={date}
+                    onPickDay={(d) => {
+                      setDate(d)
+                      setSlotId(null)
+                    }}
+                    canPrev={cursorKey > monthKeys[0]}
+                    canNext={cursorKey < monthKeys[monthKeys.length - 1]}
+                  />
+                )}
+                {dates.length === 0 && (
+                  <p className="mt-3 text-sm text-cream-dim">
+                    Всё занято. Загляните позже, окошки открываются регулярно.
+                  </p>
+                )}
+              </div>
             )}
             {slotLost && (
               <p className="mt-3 rounded-lg bg-gold/10 px-3.5 py-2.5 text-sm text-gold">
                 Ой, это время только что заняли. Выберите, пожалуйста, другое.
               </p>
             )}
-            {date && byDate[date] && (
+            {date && freeByDate[date] && (
               <div className="mt-4">
                 <p className="mb-2 text-sm text-cream-dim">{fmtDateFull(date)}, время:</p>
                 <div className="flex flex-wrap gap-2">
-                  {byDate[date].map((s) => (
+                  {freeByDate[date].map((s) => (
                     <button
                       key={s.id}
                       onClick={() => {
@@ -261,89 +297,6 @@ export default function Book() {
         </div>
       )}
     </Wrap>
-  )
-}
-
-// Календарь на месяц, как привычная картинка мастера: доступны только дни с окошками
-function MonthPicker({ byDate, date, onPick }) {
-  // открываемся сразу на первом месяце, где есть свободные окошки
-  const [cursor, setCursor] = useState(() => {
-    const first = Object.keys(byDate).sort()[0]
-    const d = first ? new Date(first + 'T12:00:00') : new Date()
-    return new Date(d.getFullYear(), d.getMonth(), 1)
-  })
-
-  const first = new Date(cursor)
-  const pad = (first.getDay() + 6) % 7
-  const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate()
-  const cells = []
-  for (let i = 0; i < pad; i++) cells.push(null)
-  for (let d = 1; d <= daysInMonth; d++) cells.push(toISO(new Date(cursor.getFullYear(), cursor.getMonth(), d)))
-
-  // есть ли окошки в следующем/прошлом месяце, чтобы показывать стрелки не зря
-  const monthKey = toISO(cursor).slice(0, 7)
-  const hasOther = (dir) => {
-    const m = new Date(cursor.getFullYear(), cursor.getMonth() + dir, 1)
-    const key = toISO(m).slice(0, 7)
-    return Object.keys(byDate).some((d) => d.slice(0, 7) === key)
-  }
-
-  return (
-    <div className="mt-3">
-      <div className="flex items-center justify-between">
-        <span className="font-display text-lg capitalize">
-          {MONTHS[cursor.getMonth()]} <span className="text-cream-dim">{cursor.getFullYear()}</span>
-        </span>
-        <div className="flex gap-1">
-          <button
-            onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
-            disabled={!hasOther(-1) && monthKey <= todayISO().slice(0, 7)}
-            className="rounded-lg bg-mocha px-3 py-1.5 disabled:opacity-30"
-          >
-            ‹
-          </button>
-          <button
-            onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
-            disabled={!hasOther(1)}
-            className="rounded-lg bg-mocha px-3 py-1.5 disabled:opacity-30"
-          >
-            ›
-          </button>
-        </div>
-      </div>
-      <div className="mt-3 grid grid-cols-7 gap-1 text-center">
-        {WEEKDAYS_SHORT.map((w) => (
-          <div key={w} className="pb-1 text-xs uppercase text-cream-dim">
-            {w}
-          </div>
-        ))}
-        {cells.map((iso, i) => {
-          if (iso === null) return <div key={`p${i}`} />
-          const free = byDate[iso]?.length || 0
-          return (
-            <button
-              key={iso}
-              disabled={!free}
-              onClick={() => onPick(iso)}
-              className={`flex aspect-square flex-col items-center justify-center rounded-lg text-sm ${
-                date === iso
-                  ? 'bg-gold font-semibold text-espresso'
-                  : free
-                    ? 'bg-mocha text-cream ring-1 ring-gold/40'
-                    : 'text-cream-dim/40'
-              }`}
-            >
-              {Number(iso.slice(8))}
-              {free > 0 && (
-                <span className={`text-[10px] leading-tight ${date === iso ? 'text-espresso/70' : 'text-gold'}`}>
-                  {free} {free === 1 ? 'окно' : 'окна'}
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
-    </div>
   )
 }
 

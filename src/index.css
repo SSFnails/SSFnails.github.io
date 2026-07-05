@@ -58,6 +58,23 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   border-radius: 2px;
 }
 
+/* красное зачёркивание занятых окошек, как маркером на её картинках */
+.strike {
+  position: relative;
+  opacity: 0.9;
+}
+.strike::after {
+  content: '';
+  position: absolute;
+  left: -5%;
+  right: -5%;
+  top: 50%;
+  height: 2px;
+  background: #e2574c;
+  border-radius: 2px;
+  transform: rotate(-5deg);
+}
+
 /* лёгкое покачивание миньонов */
 @keyframes bob {
   0%, 100% { transform: translateY(0); }
