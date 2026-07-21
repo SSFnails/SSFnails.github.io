@@ -88,9 +88,9 @@ export default function Book() {
     setError('')
     if (!slotId) return setError('Выберите дату и время.')
     if (!serviceId) return setError('Выберите услугу.')
-    if (!name.trim() || !telegram.trim() || !phone.trim())
-      return setError('Напишите имя, телеграм и телефон, чтобы мастер могла с вами связаться.')
-    if (phone.replace(/\D/g, '').length < 10) return setError('Проверьте телефон, в нём не хватает цифр.')
+    if (!name.trim() || !telegram.trim())
+      return setError('Напишите имя и телеграм, чтобы мастер могла с вами связаться.')
+    if (phone.trim() && phone.replace(/\D/g, '').length < 10) return setError('Проверьте телефон, в нём не хватает цифр.')
     setBusy(true)
     try {
       let refUrl = null
@@ -262,7 +262,7 @@ export default function Book() {
               <Field label="Телеграм">
                 <input className={inputCls} value={telegram} onChange={(e) => setTelegram(e.target.value)} placeholder="@ваш_ник" />
               </Field>
-              <Field label="Телефон">
+              <Field label="Телефон, если хотите">
                 <input
                   className={inputCls}
                   type="tel"
@@ -279,7 +279,7 @@ export default function Book() {
                 </label>
               </Field>
               <Field label="Комментарий">
-                <textarea className={`${inputCls} min-h-20`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Пожелания, вопросы. Если у вас аллергия, обязательно напишите: у мастера дома живёт кот." />
+                <textarea className={`${inputCls} min-h-20`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Вопросы, пожелания" />
               </Field>
             </div>
           </section>

@@ -124,8 +124,7 @@ declare
   v_price int;
 begin
   if coalesce(trim(p_name), '') = ''
-     or coalesce(trim(p_telegram), '') = ''
-     or coalesce(trim(p_phone), '') = '' then
+     or coalesce(trim(p_telegram), '') = '' then
     raise exception 'BAD_INPUT';
   end if;
 
@@ -154,10 +153,10 @@ begin
 
   if v_client is null then
     insert into clients (name, telegram, phone)
-      values (trim(p_name), trim(p_telegram), trim(p_phone))
+      values (trim(p_name), trim(p_telegram), nullif(trim(p_phone), ''))
       returning id into v_client;
-  else
-    -- у постоянной клиентки обновляем телефон, если она указала новый
+  elsif coalesce(trim(p_phone), '') <> '' then
+    -- у постоянной клиентки обновляем телефон, только если она указала новый
     update clients set phone = trim(p_phone) where id = v_client;
   end if;
 
